@@ -16,6 +16,7 @@ import { ExpenseForm } from '@/components/expenses/ExpenseForm'
 import { SummaryCards } from '@/components/expenses/SummaryCards'
 import { Modal } from '@/components/expenses/Modal'
 import { ImportModal } from '@/components/expenses/ImportModal'
+import { CartolaModal } from '@/components/expenses/CartolaModal'
 import { Button } from '@/components/ui/Button'
 
 export default function DashboardPage() {
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [cartolaOpen, setCartolaOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [filterMember, setFilterMember] = useState<string>('Todos')
 
@@ -124,6 +126,9 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setCartolaOpen(true)}>
+                <Upload className="w-4 h-4 mr-1.5" /> Subir cartola PDF
+              </Button>
               <Button variant="secondary" onClick={() => setImportOpen(true)}>
                 <Upload className="w-4 h-4 mr-1.5" /> Importar Excel
               </Button>
@@ -202,6 +207,17 @@ export default function DashboardPage() {
           defaultYear={year}
           onSubmit={handleCreate}
           onCancel={() => setModalOpen(false)}
+        />
+      </Modal>
+
+      {/* Cartola PDF modal */}
+      <Modal open={cartolaOpen} title="Subir cartola bancaria (PDF)" onClose={() => setCartolaOpen(false)}>
+        <CartolaModal
+          defaultMonth={month}
+          defaultYear={year}
+          defaultPaidBy="César"
+          onImport={handleImportRows}
+          onClose={() => setCartolaOpen(false)}
         />
       </Modal>
 

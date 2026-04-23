@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { Expense } from '@/types'
 import {
   getExpensesByMonth,
@@ -15,6 +15,7 @@ import { ExpenseRow } from '@/components/expenses/ExpenseRow'
 import { ExpenseForm } from '@/components/expenses/ExpenseForm'
 import { SummaryCards } from '@/components/expenses/SummaryCards'
 import { Modal } from '@/components/expenses/Modal'
+import { ImportModal } from '@/components/expenses/ImportModal'
 import { Button } from '@/components/ui/Button'
 
 export default function DashboardPage() {
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [filterMember, setFilterMember] = useState<string>('Todos')
 
@@ -51,6 +53,13 @@ export default function DashboardPage() {
   function nextMonth() {
     if (month === 12) { setMonth(1); setYear(y => y + 1) }
     else setMonth(m => m + 1)
+  }
+
+  async function handleImportRows(rows: Omit<Expense, 'id' | 'created_at' | 'user_id'>[]) {
+    if (!user) return
+    await Promise.all(rows.map((row) => createExpense({ ...row, user_id: user.id })))
+    setImportOpen(false)
+    load()
   }
 
   async function handleCreate(data: Omit<Expense, 'id' | 'created_at' | 'user_id'>) {
@@ -114,9 +123,14 @@ export default function DashboardPage() {
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-            <Button onClick={() => setModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-1.5" /> Agregar gasto
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload className="w-4 h-4 mr-1.5" /> Importar Excel
+              </Button>
+              <Button onClick={() => setModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-1.5" /> Agregar gasto
+              </Button>
+            </div>
           </div>
 
           {/* Filter by member */}
@@ -188,6 +202,16 @@ export default function DashboardPage() {
           defaultYear={year}
           onSubmit={handleCreate}
           onCancel={() => setModalOpen(false)}
+        />
+      </Modal>
+
+      {/* Import modal */}
+      <Modal open={importOpen} title="Importar desde Excel" onClose={() => setImportOpen(false)}>
+        <ImportModal
+          defaultMonth={month}
+          defaultYear={year}
+          onImport={handleImportRows}
+          onClose={() => setImportOpen(false)}
         />
       </Modal>
 

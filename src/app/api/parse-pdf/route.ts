@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { detectarBanco, parsearCartola } from '@/lib/cartola-parser'
+import { extractText } from 'unpdf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const uint8 = new Uint8Array(buffer)
-  const doc = await pdfjsLib.getDocument({
-    data: uint8,
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    useSystemFonts: true,
-  }).promise
-
-  let text = ''
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i)
-    const content = await page.getTextContent()
-    const pageText = content.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ')
-    text += pageText + '\n'
-  }
-  return text
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,11 +19,10 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const texto = await extractTextFromPDF(buffer)
+    const { text } = await extractText(new Uint8Array(arrayBuffer), { mergePages: true })
 
     const banco = detectarBanco(file.name)
-    const transacciones = parsearCartola(texto, banco)
+    const transacciones = parsearCartola(text, banco)
 
     return NextResponse.json({ transacciones, banco, total: transacciones.length })
   } catch (err) {

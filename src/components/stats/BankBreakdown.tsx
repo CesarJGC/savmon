@@ -1,5 +1,5 @@
 'use client'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatCLP } from '@/lib/utils'
 import { BANK_TABS } from '@/lib/utils'
 

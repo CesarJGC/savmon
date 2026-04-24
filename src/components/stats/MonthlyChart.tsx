@@ -1,6 +1,6 @@
 'use client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
-import { formatCLP, getMonthName } from '@/lib/utils'
+import { formatCLP } from '@/lib/utils'
 
 interface MonthlyData {
   label: string

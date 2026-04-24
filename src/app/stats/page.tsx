@@ -32,6 +32,7 @@ export default function StatsPage() {
     }
   }, [user, period])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   // Filtrar por banco

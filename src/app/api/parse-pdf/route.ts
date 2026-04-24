@@ -4,6 +4,28 @@ import { detectarBanco, parsearCartola } from '@/lib/cartola-parser'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const uint8 = new Uint8Array(buffer)
+  const doc = await pdfjsLib.getDocument({
+    data: uint8,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  }).promise
+
+  let text = ''
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    const pageText = content.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+    text += pageText + '\n'
+  }
+  return text
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
@@ -19,11 +41,7 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse')
-    const data = await pdfParse(buffer)
-    const texto: string = data.text
+    const texto = await extractTextFromPDF(buffer)
 
     const banco = detectarBanco(file.name)
     const transacciones = parsearCartola(texto, banco)

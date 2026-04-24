@@ -19,7 +19,7 @@ export type ParsedTransaction = {
 // ─── Palabras a omitir ────────────────────────────────────────────────────────
 const SKIP_KEYWORDS = [
   'pago automatico', 'pago tarjeta', 'monto cancelado', 'total pagos',
-  'traspaso deuda', 'saldo adeudado', 'monto facturado', 'monto mínimo',
+  'saldo adeudado', 'monto facturado', 'monto mínimo',
   'monto minimo', 'monto pagado', 'nota credito', 'nota crédito',
   'total operaciones', 'total transacciones', 'sin movimientos',
   'total productos', 'total cargos', 'total tarjeta',

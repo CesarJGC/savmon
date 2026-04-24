@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
-import { ParsedTransaction } from '@/lib/cartola-parser'
-import { Expense, Member } from '@/types'
+import { ParsedTransaction, BankType } from '@/lib/cartola-parser'
+import { Expense, BankTab } from '@/types'
 import { formatCLP } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -18,12 +18,12 @@ const BANK_LABELS: Record<string, string> = {
 interface CartolaModalProps {
   defaultMonth: number
   defaultYear: number
-  defaultPaidBy: Member
+  knownPersons?: string[]
   onImport: (rows: Omit<Expense, 'id' | 'created_at' | 'user_id'>[]) => Promise<void>
   onClose: () => void
 }
 
-export function CartolaModal({ defaultMonth, defaultYear, defaultPaidBy, onImport, onClose }: CartolaModalProps) {
+export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: CartolaModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [uploading, setUploading] = useState(false)
@@ -75,7 +75,8 @@ export function CartolaModal({ defaultMonth, defaultYear, defaultPaidBy, onImpor
         return {
           description: tx.descripcion,
           amount: tx.monto,
-          paid_by: (tx.persona as Member | undefined) ?? defaultPaidBy,
+          paid_by: tx.persona ?? '',
+          bank: (banco as BankTab) ?? 'manual',
           status: 'pendiente' as const,
           installment_current: tx.cuota_actual,
           installment_total: tx.total_cuotas,

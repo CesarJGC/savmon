@@ -19,6 +19,18 @@ export async function getExpensesByMonth(userId: string, year: number, month: nu
   return data as Expense[]
 }
 
+export async function getDistinctPersons(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('paid_by')
+    .eq('user_id', userId)
+    .not('paid_by', 'is', null)
+
+  if (error) return []
+  const unique = [...new Set((data as { paid_by: string }[]).map(r => r.paid_by).filter(Boolean))]
+  return unique.sort()
+}
+
 export async function createExpense(expense: Omit<Expense, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('expenses')

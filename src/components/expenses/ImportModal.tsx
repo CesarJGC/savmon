@@ -1,8 +1,8 @@
 'use client'
 import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import { Expense, Member, ExpenseStatus } from '@/types'
-import { MEMBERS, formatCLP } from '@/lib/utils'
+import { Expense, ExpenseStatus } from '@/types'
+import { formatCLP } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Upload, AlertCircle, CheckCircle2, X } from 'lucide-react'
@@ -10,7 +10,8 @@ import { Upload, AlertCircle, CheckCircle2, X } from 'lucide-react'
 interface ImportRow {
   description: string
   amount: number
-  paid_by: Member
+  paid_by: string
+  bank: 'manual'
   status: ExpenseStatus
   installment_current: number
   installment_total: number
@@ -25,7 +26,7 @@ interface ImportModalProps {
   defaultMonth: number
   defaultYear: number
   onImport: (rows: Omit<Expense, 'id' | 'created_at' | 'user_id'>[]) => Promise<void>
-  onClose: () => void
+  onCancel: () => void
 }
 
 function parseInstallment(value: string): { current: number; total: number } {
@@ -45,15 +46,7 @@ function parseAmount(value: string | number): number {
   return Math.abs(Math.round(Number(clean))) || 0
 }
 
-function parseMember(value: string): Member {
-  const v = String(value || '').trim()
-  // Normalize common aliases
-  if (v === 'Nices' || v === 'Nicole' && false) return 'Nices'
-  if (MEMBERS.includes(v as Member)) return v as Member
-  return 'Otro'
-}
-
-export function ImportModal({ defaultMonth, defaultYear, onImport, onClose }: ImportModalProps) {
+export function ImportModal({ defaultMonth, defaultYear, onImport, onCancel }: ImportModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<ImportRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,7 +65,7 @@ export function ImportModal({ defaultMonth, defaultYear, onImport, onClose }: Im
         const parsed: ImportRow[] = raw.map((r) => {
           const description = String(r['Descripción'] ?? r['descripcion'] ?? r['description'] ?? r['Item'] ?? r['item'] ?? '').trim()
           const amount = parseAmount(r['Monto'] ?? r['monto'] ?? r['amount'] ?? r['$'] ?? 0)
-          const paid_by = parseMember(String(r['Quién Paga'] ?? r['Quien paga'] ?? r['paid_by'] ?? r['Quién'] ?? ''))
+          const paid_by = String(r['Quién Paga'] ?? r['Quien paga'] ?? r['paid_by'] ?? r['Quién'] ?? '').trim()
           const status = String(r['Estado'] ?? r['status'] ?? '').toLowerCase() === 'pagado' ? 'pagado' : 'pendiente'
           const instStr = String(r['Cuota'] ?? r['cuota'] ?? r['installment'] ?? '1')
           const { current, total } = parseInstallment(instStr)
@@ -85,6 +78,7 @@ export function ImportModal({ defaultMonth, defaultYear, onImport, onClose }: Im
             description,
             amount,
             paid_by,
+            bank: 'manual' as const,
             status: status as ExpenseStatus,
             installment_current: current,
             installment_total: total,
@@ -144,7 +138,7 @@ export function ImportModal({ defaultMonth, defaultYear, onImport, onClose }: Im
         <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
         <p className="text-lg font-semibold text-gray-800">¡Importación exitosa!</p>
         <p className="text-sm text-gray-500">{selected.size} gastos importados</p>
-        <Button onClick={onClose}>Cerrar</Button>
+        <Button onClick={onCancel}>Cerrar</Button>
       </div>
     )
   }

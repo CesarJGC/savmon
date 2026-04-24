@@ -12,14 +12,6 @@ interface ExpenseRowProps {
   onToggleStatus: (id: string, status: string) => void
 }
 
-const memberColors: Record<string, 'indigo' | 'blue' | 'green' | 'yellow' | 'gray'> = {
-  César: 'indigo',
-  Nices: 'blue',
-  Nicole: 'green',
-  Ximena: 'yellow',
-  Otro: 'gray',
-}
-
 export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus }: ExpenseRowProps) {
   const isPaid = expense.status === 'pagado'
 
@@ -50,7 +42,9 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus }: Expens
         {formatCLP(expense.amount)}
       </td>
       <td className="py-3 px-4">
-        <Badge color={memberColors[expense.paid_by] ?? 'gray'}>{expense.paid_by}</Badge>
+        {expense.paid_by
+          ? <Badge color="indigo">{expense.paid_by}</Badge>
+          : <span className="text-xs text-gray-300">—</span>}
       </td>
       <td className="py-3 px-4 text-sm text-gray-500 text-center">
         {formatInstallment(expense.installment_current, expense.installment_total)}

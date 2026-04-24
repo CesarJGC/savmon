@@ -24,6 +24,8 @@ const SKIP_KEYWORDS = [
   'total operaciones', 'total transacciones', 'sin movimientos',
   'total productos', 'total cargos', 'total tarjeta',
   'cargo automático', 'cargo automatico', 'pago normal',
+  'pago pesos tef', 'pago cuota', 'abono', 'transferencia recibida',
+  'total pat', 'total pagos a la cuenta',
 ]
 
 // ─── Categorías automáticas ───────────────────────────────────────────────────

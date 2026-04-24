@@ -1,16 +1,17 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
-import { Plus, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
-import { Expense } from '@/types'
+import { Plus, ChevronLeft, ChevronRight, Upload, FileText } from 'lucide-react'
+import { Expense, BankTab } from '@/types'
 import {
   getExpensesByMonth,
   createExpense,
   updateExpense,
   deleteExpense,
   toggleExpenseStatus,
+  getDistinctPersons,
 } from '@/lib/supabase'
-import { computeSummaries, getMonthName, MEMBERS } from '@/lib/utils'
+import { computePersonSummaries, getMonthName, BANK_TABS } from '@/lib/utils'
 import { ExpenseRow } from '@/components/expenses/ExpenseRow'
 import { ExpenseForm } from '@/components/expenses/ExpenseForm'
 import { SummaryCards } from '@/components/expenses/SummaryCards'
@@ -24,22 +25,25 @@ export default function DashboardPage() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
+  const [activeBank, setActiveBank] = useState<BankTab>('todos')
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [knownPersons, setKnownPersons] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [cartolaOpen, setCartolaOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [filterMember, setFilterMember] = useState<string>('Todos')
 
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
-      const data = await getExpensesByMonth(user.id, year, month)
+      const [data, persons] = await Promise.all([
+        getExpensesByMonth(user.id, year, month),
+        getDistinctPersons(user.id),
+      ])
       setExpenses(data)
-    } catch (err) {
-      console.error(err)
+      setKnownPersons(persons)
     } finally {
       setLoading(false)
     }
@@ -51,7 +55,6 @@ export default function DashboardPage() {
     if (month === 1) { setMonth(12); setYear(y => y - 1) }
     else setMonth(m => m - 1)
   }
-
   function nextMonth() {
     if (month === 12) { setMonth(1); setYear(y => y + 1) }
     else setMonth(m => m + 1)
@@ -59,8 +62,9 @@ export default function DashboardPage() {
 
   async function handleImportRows(rows: Omit<Expense, 'id' | 'created_at' | 'user_id'>[]) {
     if (!user) return
-    await Promise.all(rows.map((row) => createExpense({ ...row, user_id: user.id })))
+    await Promise.all(rows.map(row => createExpense({ ...row, user_id: user.id })))
     setImportOpen(false)
+    setCartolaOpen(false)
     load()
   }
 
@@ -89,12 +93,13 @@ export default function DashboardPage() {
     load()
   }
 
-  const filtered = filterMember === 'Todos'
+  // Filtrar por banco activo
+  const filtered = activeBank === 'todos'
     ? expenses
-    : expenses.filter(e => e.paid_by === filterMember)
+    : expenses.filter(e => e.bank === activeBank)
 
-  const summaries = computeSummaries(expenses)
-  const grandTotal = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const summaries = computePersonSummaries(filtered)
+  const grandTotal = filtered.reduce((sum, e) => sum + e.amount, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -110,10 +115,11 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-6 flex gap-6">
-        {/* Main content */}
+        {/* Main */}
         <div className="flex-1 min-w-0">
-          {/* Month nav */}
-          <div className="flex items-center justify-between mb-6">
+
+          {/* Navegación mes */}
+          <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
                 <ChevronLeft className="w-5 h-5" />
@@ -126,36 +132,41 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setCartolaOpen(true)}>
-                <Upload className="w-4 h-4 mr-1.5" /> Subir cartola PDF
+              <Button variant="secondary" size="sm" onClick={() => setCartolaOpen(true)}>
+                <FileText className="w-4 h-4 mr-1.5" /> Cartola PDF
               </Button>
-              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
                 <Upload className="w-4 h-4 mr-1.5" /> Importar Excel
               </Button>
-              <Button onClick={() => setModalOpen(true)}>
+              <Button size="sm" onClick={() => setModalOpen(true)}>
                 <Plus className="w-4 h-4 mr-1.5" /> Agregar gasto
               </Button>
             </div>
           </div>
 
-          {/* Filter by member */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            {['Todos', ...MEMBERS].map((m) => (
+          {/* Tabs de banco */}
+          <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+            {BANK_TABS.map(tab => (
               <button
-                key={m}
-                onClick={() => setFilterMember(m)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  filterMember === m
+                key={tab.key}
+                onClick={() => setActiveBank(tab.key)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeBank === tab.key
                     ? 'bg-indigo-600 text-white'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                {m}
+                {tab.label}
+                {tab.key !== 'todos' && (
+                  <span className="ml-1.5 text-xs opacity-70">
+                    {expenses.filter(e => e.bank === tab.key).length || ''}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-          {/* Expenses table */}
+          {/* Tabla */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {loading ? (
               <div className="py-16 text-center text-gray-400">Cargando gastos...</div>
@@ -172,18 +183,18 @@ export default function DashboardPage() {
                   <tr>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Descripción</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Monto</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Quién</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Corresponde a</th>
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Cuota</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Estado</th>
                     <th className="py-3 px-4" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((expense) => (
+                  {filtered.map(expense => (
                     <ExpenseRow
                       key={expense.id}
                       expense={expense}
-                      onEdit={(e) => setEditingExpense(e)}
+                      onEdit={e => setEditingExpense(e)}
                       onDelete={handleDelete}
                       onToggleStatus={handleToggle}
                     />
@@ -194,54 +205,53 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Sidebar summaries */}
+        {/* Sidebar */}
         <div className="w-64 flex-shrink-0">
           <SummaryCards summaries={summaries} grandTotal={grandTotal} />
         </div>
       </div>
 
-      {/* Create modal */}
+      {/* Modals */}
       <Modal open={modalOpen} title="Nuevo gasto" onClose={() => setModalOpen(false)}>
         <ExpenseForm
           defaultMonth={month}
           defaultYear={year}
+          defaultBank={activeBank !== 'todos' ? activeBank : 'manual'}
+          knownPersons={knownPersons}
           onSubmit={handleCreate}
           onCancel={() => setModalOpen(false)}
         />
       </Modal>
 
-      {/* Cartola PDF modal */}
-      <Modal open={cartolaOpen} title="Subir cartola bancaria (PDF)" onClose={() => setCartolaOpen(false)}>
-        <CartolaModal
-          defaultMonth={month}
-          defaultYear={year}
-          defaultPaidBy="César"
-          onImport={handleImportRows}
-          onClose={() => setCartolaOpen(false)}
-        />
-      </Modal>
-
-      {/* Import modal */}
-      <Modal open={importOpen} title="Importar desde Excel" onClose={() => setImportOpen(false)}>
-        <ImportModal
-          defaultMonth={month}
-          defaultYear={year}
-          onImport={handleImportRows}
-          onClose={() => setImportOpen(false)}
-        />
-      </Modal>
-
-      {/* Edit modal */}
       <Modal open={!!editingExpense} title="Editar gasto" onClose={() => setEditingExpense(null)}>
         {editingExpense && (
           <ExpenseForm
             initialData={editingExpense}
             defaultMonth={month}
             defaultYear={year}
+            knownPersons={knownPersons}
             onSubmit={handleEdit}
             onCancel={() => setEditingExpense(null)}
           />
         )}
+      </Modal>
+
+      <Modal open={cartolaOpen} title="Subir cartola bancaria (PDF)" onClose={() => setCartolaOpen(false)}>
+        <CartolaModal
+          defaultMonth={month}
+          defaultYear={year}
+          onImport={handleImportRows}
+          onClose={() => setCartolaOpen(false)}
+        />
+      </Modal>
+
+      <Modal open={importOpen} title="Importar desde Excel / CSV" onClose={() => setImportOpen(false)}>
+        <ImportModal
+          defaultMonth={month}
+          defaultYear={year}
+          onImport={handleImportRows}
+          onCancel={() => setImportOpen(false)}
+        />
       </Modal>
     </div>
   )

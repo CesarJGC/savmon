@@ -1,4 +1,4 @@
-export type Member = 'César' | 'Nices' | 'Nicole' | 'Ximena' | 'Otro'
+export type BankTab = 'todos' | 'bancochile' | 'itau' | 'cmr_nicole' | 'cmr_papa' | 'depto' | 'manual'
 
 export type ExpenseStatus = 'pendiente' | 'pagado'
 
@@ -6,7 +6,8 @@ export type Expense = {
   id: string
   description: string
   amount: number
-  paid_by: Member
+  paid_by: string          // libre — cualquier nombre
+  bank: BankTab            // a qué banco/fuente pertenece
   status: ExpenseStatus
   installment_current: number
   installment_total: number
@@ -18,17 +19,9 @@ export type Expense = {
   user_id: string
 }
 
-export type MonthlySummary = {
-  member: Member
+export type PersonSummary = {
+  person: string
   total: number
   pendiente: number
   pagado: number
-}
-
-export type MonthlyView = {
-  year: number
-  month: number
-  expenses: Expense[]
-  summaries: MonthlySummary[]
-  grandTotal: number
 }

@@ -20,6 +20,7 @@ interface ExpenseRowProps {
 export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate, knownPersons, selected, onSelect }: ExpenseRowProps) {
   const isPaid = expense.status === 'pagado'
   const [activeField, setActiveField] = useState<'paid_by' | 'category' | null>(null)
+  const [newPerson, setNewPerson] = useState('')
   const paidByRef = useRef<HTMLDivElement>(null)
   const categoryRef = useRef<HTMLDivElement>(null)
 
@@ -37,6 +38,7 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
 
   function selectPaidBy(person: string) {
     onUpdate(expense.id, { paid_by: person })
+    setNewPerson('')
     setActiveField(null)
   }
 
@@ -128,11 +130,10 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
               : <span className="text-xs text-gray-300 hover:text-gray-500 transition-colors">— asignar</span>}
           </button>
           {activeField === 'paid_by' && (
-            <div className="absolute left-0 top-7 z-30 bg-white shadow-xl rounded-xl border border-gray-200 p-2.5 min-w-[150px]">
-              {knownPersons.length === 0 ? (
-                <p className="text-xs text-gray-400 px-1">No hay personas guardadas</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
+            <div className="absolute left-0 top-7 z-30 bg-white shadow-xl rounded-xl border border-gray-200 p-2.5 min-w-[180px]">
+              {/* Chips de personas conocidas */}
+              {knownPersons.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {knownPersons.map(p => (
                     <button
                       key={p}
@@ -148,6 +149,29 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
                   ))}
                 </div>
               )}
+              {/* Input para nombre nuevo */}
+              <form
+                onSubmit={e => {
+                  e.preventDefault()
+                  if (newPerson.trim()) selectPaidBy(newPerson.trim())
+                }}
+                className="flex gap-1"
+              >
+                <input
+                  autoFocus
+                  value={newPerson}
+                  onChange={e => setNewPerson(e.target.value)}
+                  placeholder="Nuevo nombre..."
+                  className="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <button
+                  type="submit"
+                  disabled={!newPerson.trim()}
+                  className="px-2 py-1 text-xs bg-indigo-600 text-white rounded-lg disabled:opacity-40 hover:bg-indigo-700"
+                >
+                  OK
+                </button>
+              </form>
             </div>
           )}
         </div>

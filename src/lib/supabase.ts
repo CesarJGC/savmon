@@ -82,6 +82,16 @@ export async function deleteExpense(id: string) {
   if (error) throw error
 }
 
+export async function deleteExpensesBulk(ids: string[]) {
+  if (ids.length === 0) return
+  const { error } = await supabase
+    .from('expenses')
+    .delete()
+    .in('id', ids)
+
+  if (error) throw error
+}
+
 export async function toggleExpenseStatus(id: string, currentStatus: string) {
   const newStatus = currentStatus === 'pagado' ? 'pendiente' : 'pagado'
   return updateExpense(id, { status: newStatus as 'pendiente' | 'pagado' })

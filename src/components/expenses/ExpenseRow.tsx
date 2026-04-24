@@ -10,13 +10,23 @@ interface ExpenseRowProps {
   onEdit: (expense: Expense) => void
   onDelete: (id: string) => void
   onToggleStatus: (id: string, status: string) => void
+  selected: boolean
+  onSelect: (id: string, checked: boolean) => void
 }
 
-export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus }: ExpenseRowProps) {
+export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, selected, onSelect }: ExpenseRowProps) {
   const isPaid = expense.status === 'pagado'
 
   return (
-    <tr className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isPaid ? 'opacity-60' : ''}`}>
+    <tr className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isPaid ? 'opacity-60' : ''} ${selected ? 'bg-indigo-50 hover:bg-indigo-50' : ''}`}>
+      <td className="py-3 px-4 w-8">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={e => onSelect(expense.id, e.target.checked)}
+          className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer"
+        />
+      </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           <button

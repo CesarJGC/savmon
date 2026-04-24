@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
-import { Plus, ChevronLeft, ChevronRight, Upload, FileText, BarChart2 } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Upload, FileText, BarChart2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { Expense, BankTab } from '@/types'
 import {
@@ -9,6 +9,7 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  deleteExpensesBulk,
   toggleExpenseStatus,
   getDistinctPersons,
 } from '@/lib/supabase'
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [cartolaOpen, setCartolaOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     if (!user) return
@@ -54,10 +56,12 @@ export default function DashboardPage() {
   useEffect(() => { load() }, [load])
 
   function prevMonth() {
+    setSelectedIds(new Set())
     if (month === 1) { setMonth(12); setYear(y => y - 1) }
     else setMonth(m => m - 1)
   }
   function nextMonth() {
+    setSelectedIds(new Set())
     if (month === 12) { setMonth(1); setYear(y => y + 1) }
     else setMonth(m => m + 1)
   }
@@ -92,6 +96,27 @@ export default function DashboardPage() {
 
   async function handleToggle(id: string, status: string) {
     await toggleExpenseStatus(id, status)
+    load()
+  }
+
+  function handleSelect(id: string, checked: boolean) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  function handleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(filtered.map(e => e.id)) : new Set())
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`¿Eliminar ${selectedIds.size} gasto${selectedIds.size > 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return
+    await deleteExpensesBulk(Array.from(selectedIds))
+    setSelectedIds(new Set())
     load()
   }
 
@@ -176,6 +201,26 @@ export default function DashboardPage() {
             ))}
           </div>
 
+          {/* Barra de acciones masivas */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 mb-3">
+              <span className="text-sm font-medium text-indigo-700">
+                {selectedIds.size} gasto{selectedIds.size > 1 ? 's' : ''} seleccionado{selectedIds.size > 1 ? 's' : ''}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-indigo-500 hover:text-indigo-700"
+                >
+                  Cancelar
+                </button>
+                <Button size="sm" variant="ghost" onClick={handleBulkDelete} className="text-red-600 hover:bg-red-50">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Tabla */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {loading ? (
@@ -191,6 +236,15 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
+                    <th className="py-3 px-4 w-8">
+                      <input
+                        type="checkbox"
+                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                        ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filtered.length }}
+                        onChange={e => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Descripción</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Monto</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Corresponde a</th>
@@ -207,6 +261,8 @@ export default function DashboardPage() {
                       onEdit={e => setEditingExpense(e)}
                       onDelete={handleDelete}
                       onToggleStatus={handleToggle}
+                      selected={selectedIds.has(expense.id)}
+                      onSelect={handleSelect}
                     />
                   ))}
                 </tbody>

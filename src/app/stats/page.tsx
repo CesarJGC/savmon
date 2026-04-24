@@ -115,14 +115,15 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-2xl">💰</span>
-            <h1 className="text-xl font-bold text-gray-900">SavMon</h1>
-            <div className="flex items-center gap-1 ml-4">
-              <Link href="/dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
-                <LayoutDashboard className="w-4 h-4" /> Dashboard
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💰</span>
+            <h1 className="text-lg font-bold text-gray-900">SavMon</h1>
+            <div className="flex items-center gap-1 ml-2">
+              <Link href="/dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
               <span className="px-3 py-1.5 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg">
                 Métricas
@@ -133,10 +134,10 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
         {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1">
             {PERIODS.map(p => (
               <button
@@ -173,7 +174,7 @@ export default function StatsPage() {
         ) : (
           <>
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard
                 title={`Total ${getMonthName(now.getMonth() + 1)}`}
                 value={totalThisMonth}
@@ -208,13 +209,13 @@ export default function StatsPage() {
             <MonthlyChart data={monthlyData} />
 
             {/* Segunda fila: banco + persona */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <BankBreakdown data={bankData} />
               <PersonBreakdown data={personData} />
             </div>
 
             {/* Categorías + top gastos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <CategoryBreakdown data={categoryData} />
 
               {/* Top gastos */}

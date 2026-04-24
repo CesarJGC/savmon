@@ -121,7 +121,7 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
             <div className="relative inline-block" ref={categoryRef}>
               <button
                 onClick={() => toggle('category')}
-                className={`text-xs transition-colors ${expense.category ? 'text-gray-500 hover:text-indigo-600' : 'text-gray-300 hover:text-indigo-500'}`}
+                className={`text-xs transition-colors ${expense.category ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-indigo-500'}`}
               >
                 {expense.category || 'Sin categoría'}
               </button>
@@ -166,7 +166,7 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
           <button onClick={openPicker} className="text-left">
             {expense.paid_by
               ? <Badge color="indigo" className="cursor-pointer hover:opacity-80">{expense.paid_by}</Badge>
-              : <span className="text-xs text-gray-300 hover:text-gray-500 transition-colors">— asignar</span>}
+              : <span className="text-xs text-gray-400 hover:text-gray-600 transition-colors">— asignar</span>}
           </button>
 
           {activeField === 'paid_by' && (

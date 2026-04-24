@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const { text } = await extractText(new Uint8Array(arrayBuffer), { mergePages: true })
+    const result = await extractText(new Uint8Array(arrayBuffer), { mergePages: false })
+    const text = (result.text as string[]).join('\n')
 
     const banco = detectarBanco(file.name)
     const transacciones = parsearCartola(text, banco)

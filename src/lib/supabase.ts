@@ -19,6 +19,25 @@ export async function getExpensesByMonth(userId: string, year: number, month: nu
   return data as Expense[]
 }
 
+export async function getExpensesForLastMonths(userId: string, months = 6): Promise<Expense[]> {
+  const now = new Date()
+  const dates = Array.from({ length: months }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  })
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('user_id', userId)
+    .or(dates.map(d => `and(year.eq.${d.year},month.eq.${d.month})`).join(','))
+    .order('year', { ascending: true })
+    .order('month', { ascending: true })
+
+  if (error) throw error
+  return data as Expense[]
+}
+
 export async function getDistinctPersons(userId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('expenses')

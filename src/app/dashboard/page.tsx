@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
-import { Plus, ChevronLeft, ChevronRight, Upload, FileText } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Upload, FileText, BarChart2 } from 'lucide-react'
+import Link from 'next/link'
 import { Expense, BankTab } from '@/types'
 import {
   getExpensesByMonth,
@@ -109,6 +110,14 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
             <h1 className="text-xl font-bold text-gray-900">SavMon</h1>
+            <div className="flex items-center gap-1 ml-4">
+              <span className="px-3 py-1.5 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg">
+                Dashboard
+              </span>
+              <Link href="/stats" className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                <BarChart2 className="w-4 h-4" /> Métricas
+              </Link>
+            </div>
           </div>
           <UserButton />
         </div>

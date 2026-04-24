@@ -20,6 +20,7 @@ import { SummaryCards } from '@/components/expenses/SummaryCards'
 import { Modal } from '@/components/expenses/Modal'
 import { ImportModal } from '@/components/expenses/ImportModal'
 import { CartolaModal } from '@/components/expenses/CartolaModal'
+import { BalancesCard } from '@/components/expenses/BalancesCard'
 import { Button } from '@/components/ui/Button'
 
 export default function DashboardPage() {
@@ -272,8 +273,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-64 flex-shrink-0 space-y-4">
           <SummaryCards summaries={summaries} grandTotal={grandTotal} />
+          <BalancesCard expenses={filtered} />
         </div>
       </div>
 

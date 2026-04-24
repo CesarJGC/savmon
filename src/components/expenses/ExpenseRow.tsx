@@ -3,7 +3,7 @@ import { Expense } from '@/types'
 import { formatCLP, formatInstallment } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Pencil, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import { Pencil, Trash2, CheckCircle2, Circle, Users } from 'lucide-react'
 
 interface ExpenseRowProps {
   expense: Expense
@@ -44,6 +44,11 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, selected
             </p>
             {expense.category && (
               <p className="text-xs text-gray-400">{expense.category}</p>
+            )}
+            {expense.split_members && expense.split_members.length > 1 && (
+              <p className="text-xs text-indigo-400 flex items-center gap-0.5 mt-0.5">
+                <Users className="w-3 h-3" /> ÷{expense.split_members.length} personas
+              </p>
             )}
           </div>
         </div>

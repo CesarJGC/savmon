@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Expense, BankTab, ExpenseStatus } from '@/types'
-import { CATEGORIES, BANK_TABS } from '@/lib/utils'
+import { CATEGORIES, BANK_TABS, formatCLP } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { Users } from 'lucide-react'
 
 type FormData = {
   description: string
@@ -46,9 +47,40 @@ export function ExpenseForm({
     notes:                initialData?.notes ?? '',
   })
 
+  const [splitEnabled, setSplitEnabled] = useState(
+    !!(initialData?.split_members && initialData.split_members.length > 1)
+  )
+  const [splitMembers, setSplitMembers] = useState<string[]>(
+    initialData?.split_members ?? []
+  )
+
+  // Cuando se activa el split, pre-incluir al pagador si ya está definido
+  useEffect(() => {
+    if (splitEnabled && form.paid_by && !splitMembers.includes(form.paid_by)) {
+      setSplitMembers(prev => [...prev, form.paid_by])
+    }
+  }, [splitEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (field: keyof FormData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm(prev => ({ ...prev, [field]: e.target.value }))
+
+  function toggleMember(person: string) {
+    setSplitMembers(prev =>
+      prev.includes(person) ? prev.filter(p => p !== person) : [...prev, person]
+    )
+  }
+
+  const amount = Math.round(Number(form.amount.replace(/\./g, '').replace(',', '.')) || 0)
+  const sharePerPerson = splitEnabled && splitMembers.length > 0
+    ? Math.round(amount / splitMembers.length)
+    : 0
+
+  // Personas disponibles para split: knownPersons + paid_by si es nuevo
+  const splitOptions = Array.from(new Set([
+    ...knownPersons,
+    ...(form.paid_by.trim() ? [form.paid_by.trim()] : []),
+  ])).filter(Boolean)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,7 +88,7 @@ export function ExpenseForm({
     try {
       await onSubmit({
         description:         form.description,
-        amount:              Math.round(Number(form.amount.replace(/\./g, '').replace(',', '.'))),
+        amount,
         paid_by:             form.paid_by.trim(),
         bank:                form.bank,
         status:              form.status,
@@ -66,6 +98,7 @@ export function ExpenseForm({
         year:                Number(form.year),
         category:            form.category || undefined,
         notes:               form.notes || undefined,
+        split_members:       splitEnabled && splitMembers.length > 1 ? splitMembers : undefined,
       })
     } finally {
       setLoading(false)
@@ -114,7 +147,7 @@ export function ExpenseForm({
           </select>
         </div>
 
-        {/* Corresponde a (paid_by libre con datalist) */}
+        {/* Corresponde a */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">Corresponde a</label>
           <input
@@ -128,6 +161,76 @@ export function ExpenseForm({
             {knownPersons.map(p => <option key={p} value={p} />)}
           </datalist>
           <p className="text-xs text-gray-400 mt-1">Puedes escribir cualquier nombre nuevo</p>
+        </div>
+
+        {/* Dividir gasto */}
+        <div className="col-span-2">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !splitEnabled
+              setSplitEnabled(next)
+              if (!next) setSplitMembers([])
+              else if (form.paid_by.trim()) setSplitMembers([form.paid_by.trim()])
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors w-full ${
+              splitEnabled
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            {splitEnabled ? 'Dividir gasto activado' : 'Dividir gasto entre varias personas'}
+          </button>
+
+          {splitEnabled && (
+            <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100 space-y-2">
+              <p className="text-xs font-medium text-indigo-700 mb-2">Selecciona quiénes participan:</p>
+              {splitOptions.length === 0 ? (
+                <p className="text-xs text-gray-400">Primero escribe un nombre en "Corresponde a"</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {splitOptions.map(person => (
+                    <label
+                      key={person}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer border transition-colors ${
+                        splitMembers.includes(person)
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={splitMembers.includes(person)}
+                        onChange={() => toggleMember(person)}
+                      />
+                      {person}
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {splitMembers.length > 1 && amount > 0 && (
+                <div className="mt-2 pt-2 border-t border-indigo-200">
+                  <p className="text-xs text-indigo-600">
+                    <span className="font-bold">{formatCLP(sharePerPerson)}</span> por persona ({splitMembers.length} personas)
+                  </p>
+                  <div className="mt-1 space-y-0.5">
+                    {splitMembers.filter(m => m !== form.paid_by.trim()).map(m => (
+                      <p key={m} className="text-xs text-indigo-500">
+                        → {m} le debe {formatCLP(sharePerPerson)} a {form.paid_by || '(pagador)'}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {splitMembers.length === 1 && (
+                <p className="text-xs text-amber-600 mt-1">Selecciona al menos 2 personas para dividir</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Cuotas */}

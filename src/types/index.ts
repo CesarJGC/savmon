@@ -15,6 +15,7 @@ export type Expense = {
   year: number
   category?: string
   notes?: string
+  split_members?: string[]   // si está definido, el gasto se divide entre estas personas
   created_at: string
   user_id: string
 }

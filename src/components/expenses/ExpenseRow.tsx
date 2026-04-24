@@ -11,7 +11,7 @@ interface ExpenseRowProps {
   onEdit: (expense: Expense) => void
   onDelete: (id: string) => void
   onToggleStatus: (id: string, status: string) => void
-  onUpdate: (id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category'>>) => void
+  onUpdate: (id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category' | 'split_members'>>) => void
   knownPersons: string[]
   selected: boolean
   onSelect: (id: string, checked: boolean) => void
@@ -21,6 +21,9 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
   const isPaid = expense.status === 'pagado'
   const [activeField, setActiveField] = useState<'paid_by' | 'category' | null>(null)
   const [newPerson, setNewPerson] = useState('')
+  // Split state dentro del picker
+  const [splitMode, setSplitMode] = useState(false)
+  const [splitSel, setSplitSel] = useState<string[]>(expense.split_members ?? [])
   const paidByRef = useRef<HTMLDivElement>(null)
   const categoryRef = useRef<HTMLDivElement>(null)
 
@@ -36,9 +39,43 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
     return () => document.removeEventListener('mousedown', onDown)
   }, [activeField])
 
-  function selectPaidBy(person: string) {
-    onUpdate(expense.id, { paid_by: person })
+  function openPicker() {
+    setSplitMode(!!(expense.split_members && expense.split_members.length > 1))
+    setSplitSel(expense.split_members ?? [])
     setNewPerson('')
+    setActiveField(prev => (prev === 'paid_by' ? null : 'paid_by'))
+  }
+
+  function selectPaidBy(person: string) {
+    onUpdate(expense.id, { paid_by: person, split_members: undefined })
+    setNewPerson('')
+    setActiveField(null)
+  }
+
+  function toggleSplitPerson(person: string) {
+    setSplitSel(prev =>
+      prev.includes(person) ? prev.filter(p => p !== person) : [...prev, person]
+    )
+  }
+
+  function addNewAndToggle(name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setNewPerson('')
+    if (!allPersons.includes(trimmed)) {
+      // persona nueva: añadir al split selection si split activo, o asignar directo
+      if (splitMode) setSplitSel(prev => prev.includes(trimmed) ? prev : [...prev, trimmed])
+    } else {
+      if (splitMode) toggleSplitPerson(trimmed)
+      else selectPaidBy(trimmed)
+    }
+  }
+
+  function saveSplit() {
+    if (splitSel.length < 2) return
+    // El pagador es el paid_by actual o el primero del split
+    const payer = expense.paid_by || splitSel[0]
+    onUpdate(expense.id, { paid_by: payer, split_members: splitSel })
     setActiveField(null)
   }
 
@@ -47,7 +84,9 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
     setActiveField(null)
   }
 
-  const toggle = (field: 'paid_by' | 'category') =>
+  const allPersons = Array.from(new Set([...knownPersons, ...(expense.paid_by ? [expense.paid_by] : [])]))
+
+  const toggle = (field: 'category') =>
     setActiveField(prev => (prev === field ? null : field))
 
   return (
@@ -121,44 +160,63 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
         {formatCLP(expense.amount)}
       </td>
 
-      {/* Corresponde a — editable con chips */}
+      {/* Corresponde a — editable con chips + split */}
       <td className="py-3 px-4">
         <div className="relative inline-block" ref={paidByRef}>
-          <button onClick={() => toggle('paid_by')} className="text-left">
+          <button onClick={openPicker} className="text-left">
             {expense.paid_by
               ? <Badge color="indigo" className="cursor-pointer hover:opacity-80">{expense.paid_by}</Badge>
               : <span className="text-xs text-gray-300 hover:text-gray-500 transition-colors">— asignar</span>}
           </button>
+
           {activeField === 'paid_by' && (
-            <div className="absolute left-0 top-7 z-30 bg-white shadow-xl rounded-xl border border-gray-200 p-2.5 min-w-[180px]">
-              {/* Chips de personas conocidas */}
-              {knownPersons.length > 0 && (
+            <div className="absolute left-0 top-7 z-30 bg-white shadow-xl rounded-xl border border-gray-200 p-3 w-56">
+
+              {/* Toggle modo split */}
+              <button
+                onClick={() => {
+                  const next = !splitMode
+                  setSplitMode(next)
+                  if (next) setSplitSel(expense.split_members?.length ? expense.split_members : (expense.paid_by ? [expense.paid_by] : []))
+                  else setSplitSel([])
+                }}
+                className={`flex items-center gap-1.5 w-full text-xs font-medium px-2 py-1.5 rounded-lg mb-2 transition-colors ${
+                  splitMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                {splitMode ? 'Dividir entre:' : 'Solo asignar · activar división →'}
+              </button>
+
+              {/* Chips */}
+              {allPersons.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {knownPersons.map(p => (
-                    <button
-                      key={p}
-                      onClick={() => selectPaidBy(p)}
-                      className={`px-2.5 py-1 text-xs rounded-full border font-medium transition-colors ${
-                        expense.paid_by === p
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-700'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                  {allPersons.map(p => {
+                    const isActive = splitMode ? splitSel.includes(p) : expense.paid_by === p
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => splitMode ? toggleSplitPerson(p) : selectPaidBy(p)}
+                        className={`px-2.5 py-1 text-xs rounded-full border font-medium transition-colors ${
+                          isActive
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-700'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
-              {/* Input para nombre nuevo */}
+
+              {/* Input nombre nuevo */}
               <form
-                onSubmit={e => {
-                  e.preventDefault()
-                  if (newPerson.trim()) selectPaidBy(newPerson.trim())
-                }}
-                className="flex gap-1"
+                onSubmit={e => { e.preventDefault(); addNewAndToggle(newPerson) }}
+                className="flex gap-1 mb-2"
               >
                 <input
-                  autoFocus
+                  autoFocus={allPersons.length === 0}
                   value={newPerson}
                   onChange={e => setNewPerson(e.target.value)}
                   placeholder="Nuevo nombre..."
@@ -169,9 +227,27 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
                   disabled={!newPerson.trim()}
                   className="px-2 py-1 text-xs bg-indigo-600 text-white rounded-lg disabled:opacity-40 hover:bg-indigo-700"
                 >
-                  OK
+                  +
                 </button>
               </form>
+
+              {/* Preview split + botón guardar */}
+              {splitMode && (
+                <>
+                  {splitSel.length > 1 && (
+                    <p className="text-xs text-indigo-600 mb-1.5">
+                      {formatCLP(Math.round(expense.amount / splitSel.length))} c/u · {splitSel.length} personas
+                    </p>
+                  )}
+                  <button
+                    onClick={saveSplit}
+                    disabled={splitSel.length < 2}
+                    className="w-full py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+                  >
+                    {splitSel.length < 2 ? 'Selecciona al menos 2' : `Dividir entre ${splitSel.length}`}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

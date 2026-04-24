@@ -100,7 +100,7 @@ export default function DashboardPage() {
     load()
   }
 
-  async function handleUpdate(id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category'>>) {
+  async function handleUpdate(id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category' | 'split_members'>>) {
     await updateExpense(id, updates)
     load()
   }

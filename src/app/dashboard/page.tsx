@@ -100,6 +100,11 @@ export default function DashboardPage() {
     load()
   }
 
+  async function handleUpdate(id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category'>>) {
+    await updateExpense(id, updates)
+    load()
+  }
+
   function handleSelect(id: string, checked: boolean) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -262,6 +267,8 @@ export default function DashboardPage() {
                       onEdit={e => setEditingExpense(e)}
                       onDelete={handleDelete}
                       onToggleStatus={handleToggle}
+                      onUpdate={handleUpdate}
+                      knownPersons={knownPersons}
                       selected={selectedIds.has(expense.id)}
                       onSelect={handleSelect}
                     />

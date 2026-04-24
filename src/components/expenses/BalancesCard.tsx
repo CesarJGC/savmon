@@ -67,16 +67,16 @@ export function BalancesCard({ expenses }: BalancesCardProps) {
         <div className="space-y-2">
           {debts.map((d, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs">
-              <span className="font-medium text-gray-800 truncate max-w-[60px]">{d.from}</span>
-              <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-              <span className="font-medium text-gray-800 truncate max-w-[60px]">{d.to}</span>
-              <span className="ml-auto font-bold text-red-500 flex-shrink-0">{formatCLP(d.amount)}</span>
+              <span className="font-semibold text-gray-800 truncate max-w-[64px]">{d.from}</span>
+              <ArrowRight className="w-3 h-3 text-gray-600 flex-shrink-0" />
+              <span className="font-semibold text-gray-800 truncate max-w-[64px]">{d.to}</span>
+              <span className="ml-auto font-bold text-red-600 flex-shrink-0">{formatCLP(d.amount)}</span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-400">
+      <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-500">
         {shared.length} gasto{shared.length > 1 ? 's' : ''} compartido{shared.length > 1 ? 's' : ''} este mes
       </div>
     </div>

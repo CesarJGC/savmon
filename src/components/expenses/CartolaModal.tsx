@@ -1,34 +1,33 @@
 'use client'
 import { useState, useRef } from 'react'
-import { ParsedTransaction, BankType } from '@/lib/cartola-parser'
+import { ParsedTransaction } from '@/lib/cartola-parser'
 import { Expense, BankTab } from '@/types'
-import { formatCLP } from '@/lib/utils'
+import { formatCLP, BANK_TABS, MONTHS } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { FileText, Upload, CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { FileText, CheckCircle2, AlertCircle, X } from 'lucide-react'
 
-const BANK_LABELS: Record<string, string> = {
-  bancochile: 'BancoChile',
-  itau: 'Itaú',
-  cmr_nicole: 'CMR Nicole',
-  cmr_papa: 'CMR Papá',
-  unknown: 'Banco desconocido',
-}
+const BANK_OPTIONS = BANK_TABS.filter(b => b.key !== 'todos' && b.key !== 'manual')
 
 interface CartolaModalProps {
   defaultMonth: number
   defaultYear: number
-  knownPersons?: string[]
   onImport: (rows: Omit<Expense, 'id' | 'created_at' | 'user_id'>[]) => Promise<void>
   onClose: () => void
 }
 
 export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: CartolaModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const now = new Date()
+
+  // Configuración manual — seleccionable antes de subir el PDF
+  const [banco, setBanco] = useState<BankTab>('bancochile')
+  const [mesCartola, setMesCartola] = useState(defaultMonth)
+  const [anioCartola, setAnioCartola] = useState(defaultYear)
+
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [banco, setBanco] = useState('')
   const [txs, setTxs] = useState<ParsedTransaction[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
@@ -39,10 +38,11 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
     try {
       const fd = new FormData()
       fd.append('file', file)
+      // Pasamos el banco seleccionado para que el parser use la lógica correcta
+      fd.append('banco', banco)
       const res = await fetch('/api/parse-pdf', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Error procesando PDF')
-      setBanco(json.banco)
       setTxs(json.transacciones)
       setSelected(new Set(json.transacciones.map((_: unknown, i: number) => i)))
       setStep('preview')
@@ -70,21 +70,18 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
     setImporting(true)
     const rows = txs
       .filter((_, i) => selected.has(i))
-      .map((tx) => {
-        const date = new Date(tx.fecha)
-        return {
-          description: tx.descripcion,
-          amount: tx.monto,
-          paid_by: tx.persona ?? '',
-          bank: (banco as BankTab) ?? 'manual',
-          status: 'pendiente' as const,
-          installment_current: tx.cuota_actual,
-          installment_total: tx.total_cuotas,
-          month: date.getMonth() + 1 || defaultMonth,
-          year: date.getFullYear() || defaultYear,
-          category: tx.categoria,
-        }
-      })
+      .map((tx) => ({
+        description: tx.descripcion,
+        amount: tx.monto,
+        paid_by: tx.persona ?? '',
+        bank: banco,
+        status: 'pendiente' as const,
+        installment_current: tx.cuota_actual,
+        installment_total: tx.total_cuotas,
+        month: mesCartola,
+        year: anioCartola,
+        category: tx.categoria,
+      }))
     try {
       await onImport(rows)
       setStep('done')
@@ -93,23 +90,75 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
     }
   }
 
+  const bancoLabel = BANK_OPTIONS.find(b => b.key === banco)?.label ?? banco
+
   if (step === 'done') {
     return (
       <div className="text-center py-8 space-y-4">
         <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
         <p className="text-lg font-semibold text-gray-800">¡Cartola importada!</p>
-        <p className="text-sm text-gray-500">{selected.size} transacciones importadas desde {BANK_LABELS[banco] ?? banco}</p>
+        <p className="text-sm text-gray-500">
+          {selected.size} transacciones → {bancoLabel} {MONTHS.find(m => m.value === mesCartola)?.label} {anioCartola}
+        </p>
         <Button onClick={onClose}>Cerrar</Button>
       </div>
     )
   }
 
   if (step === 'upload') {
+    const currentYear = now.getFullYear()
+    const years = [currentYear - 1, currentYear, currentYear + 1]
+
     return (
       <div className="space-y-5">
+        {/* Selector banco + mes/año */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Banco *</label>
+            <div className="grid grid-cols-2 gap-2">
+              {BANK_OPTIONS.map(b => (
+                <button
+                  key={b.key}
+                  onClick={() => setBanco(b.key)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    banco === b.key
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mes de la cartola *</label>
+            <select
+              value={mesCartola}
+              onChange={e => setMesCartola(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Año *</label>
+            <select
+              value={anioCartola}
+              onChange={e => setAnioCartola(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Upload */}
         <div
           onClick={() => !uploading && fileRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
             uploading ? 'border-indigo-300 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'
           }`}
         >
@@ -120,12 +169,13 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
             </>
           ) : (
             <>
-              <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-700">Click para subir tu cartola PDF</p>
-              <p className="text-xs text-gray-400 mt-1">Solo archivos .pdf</p>
+              <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-700">Click para subir la cartola PDF</p>
+              <p className="text-xs text-gray-400 mt-1">El nombre del archivo no importa</p>
             </>
           )}
-          <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+          <input ref={fileRef} type="file" accept=".pdf" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
         </div>
 
         {error && (
@@ -134,28 +184,19 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
             {error}
           </div>
         )}
-
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Bancos soportados</p>
-          <div className="grid grid-cols-2 gap-1 text-xs text-gray-600">
-            <span>• bancochile_YYYY-MM.pdf</span>
-            <span>• itau_YYYY-MM.pdf</span>
-            <span>• cmr_nicole_YYYY-MM.pdf</span>
-            <span>• cmr_papa_YYYY-MM.pdf</span>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">El nombre del archivo determina el banco detectado.</p>
-        </div>
       </div>
     )
   }
 
+  // Preview
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge color="indigo">{BANK_LABELS[banco] ?? banco}</Badge>
+          <Badge color="indigo">{bancoLabel}</Badge>
+          <Badge color="gray">{MONTHS.find(m => m.value === mesCartola)?.label} {anioCartola}</Badge>
           <span className="text-sm text-gray-600">
-            <span className="font-semibold">{txs.length}</span> transacciones detectadas
+            <span className="font-semibold">{txs.length}</span> transacciones
           </span>
         </div>
         <button onClick={toggleAll} className="text-xs text-indigo-600 hover:underline">
@@ -195,7 +236,10 @@ export function CartolaModal({ defaultMonth, defaultYear, onImport, onClose }: C
       </div>
 
       <div className="flex justify-between items-center pt-2">
-        <button onClick={() => { setStep('upload'); setTxs([]); setError('') }} className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
+        <button
+          onClick={() => { setStep('upload'); setTxs([]); setError('') }}
+          className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1"
+        >
           <X className="w-4 h-4" /> Cambiar PDF
         </button>
         <Button onClick={handleImport} loading={importing} disabled={selected.size === 0}>

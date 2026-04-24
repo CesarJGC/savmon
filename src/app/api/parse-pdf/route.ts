@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
     const result = await extractText(new Uint8Array(arrayBuffer), { mergePages: false })
     const text = (result.text as string[]).join('\n')
 
-    const banco = detectarBanco(file.name)
+    // Usar banco enviado por el usuario, o detectar por nombre de archivo como fallback
+    const bancoParam = formData.get('banco') as string | null
+    const banco = (bancoParam && bancoParam !== 'unknown') ? bancoParam as import('@/lib/cartola-parser').BankType : detectarBanco(file.name)
     const transacciones = parsearCartola(text, banco)
 
     return NextResponse.json({ transacciones, banco, total: transacciones.length })

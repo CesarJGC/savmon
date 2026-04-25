@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Expense } from '@/types'
 import { formatCLP, formatInstallment, CATEGORIES } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
@@ -17,27 +17,66 @@ interface ExpenseRowProps {
   onSelect: (id: string, checked: boolean) => void
 }
 
-export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate, knownPersons, selected, onSelect }: ExpenseRowProps) {
-  const isPaid = expense.status === 'pagado'
-  const [activeField, setActiveField] = useState<'paid_by' | 'category' | null>(null)
-  const [newPerson, setNewPerson] = useState('')
-  // Split state dentro del picker
-  const [splitMode, setSplitMode] = useState(false)
-  const [splitSel, setSplitSel] = useState<string[]>(expense.split_members ?? [])
-  const paidByRef = useRef<HTMLDivElement>(null)
-  const categoryRef = useRef<HTMLDivElement>(null)
+// Popup posicionado con fixed para escapar el overflow de la tabla
+function Popup({ anchorRef, children, onClose }: {
+  anchorRef: React.RefObject<HTMLElement | null>
+  children: React.ReactNode
+  onClose: () => void
+}) {
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0, openUp: false })
 
   useEffect(() => {
-    if (!activeField) return
+    const anchor = anchorRef.current
+    if (!anchor) return
+    const rect = anchor.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const openUp = spaceBelow < 280
+    setPos({
+      top: openUp ? rect.top : rect.bottom + 4,
+      left: rect.left,
+      openUp,
+    })
+  }, [anchorRef])
+
+  useEffect(() => {
     function onDown(e: MouseEvent) {
-      const ref = activeField === 'paid_by' ? paidByRef : categoryRef
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setActiveField(null)
+      if (popupRef.current && !popupRef.current.contains(e.target as Node) &&
+          anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose()
       }
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [activeField])
+  }, [onClose, anchorRef])
+
+  return (
+    <div
+      ref={popupRef}
+      style={{
+        position: 'fixed',
+        top: pos.openUp ? undefined : pos.top,
+        bottom: pos.openUp ? window.innerHeight - pos.top : undefined,
+        left: pos.left,
+        zIndex: 9999,
+      }}
+      className="bg-white shadow-2xl rounded-xl border border-gray-200 p-3 w-56"
+    >
+      {children}
+    </div>
+  )
+}
+
+export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate, knownPersons, selected, onSelect }: ExpenseRowProps) {
+  const isPaid = expense.status === 'pagado'
+  const [activeField, setActiveField] = useState<'paid_by' | 'category' | null>(null)
+  const [newPerson, setNewPerson] = useState('')
+  const [splitMode, setSplitMode] = useState(false)
+  const [splitSel, setSplitSel] = useState<string[]>(expense.split_members ?? [])
+  const paidByAnchor = useRef<HTMLButtonElement>(null)
+  const categoryAnchor = useRef<HTMLButtonElement>(null)
+
+  const closeAll = useCallback(() => setActiveField(null), [])
 
   function openPicker() {
     setSplitMode(!!(expense.split_members && expense.split_members.length > 1))
@@ -62,18 +101,15 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
     const trimmed = name.trim()
     if (!trimmed) return
     setNewPerson('')
-    if (!allPersons.includes(trimmed)) {
-      // persona nueva: añadir al split selection si split activo, o asignar directo
-      if (splitMode) setSplitSel(prev => prev.includes(trimmed) ? prev : [...prev, trimmed])
+    if (splitMode) {
+      setSplitSel(prev => prev.includes(trimmed) ? prev : [...prev, trimmed])
     } else {
-      if (splitMode) toggleSplitPerson(trimmed)
-      else selectPaidBy(trimmed)
+      selectPaidBy(trimmed)
     }
   }
 
   function saveSplit() {
     if (splitSel.length < 2) return
-    // El pagador es el paid_by actual o el primero del split
     const payer = expense.paid_by || splitSel[0]
     onUpdate(expense.id, { paid_by: payer, split_members: splitSel })
     setActiveField(null)
@@ -85,9 +121,6 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
   }
 
   const allPersons = Array.from(new Set([...knownPersons, ...(expense.paid_by ? [expense.paid_by] : [])]))
-
-  const toggle = (field: 'category') =>
-    setActiveField(prev => (prev === field ? null : field))
 
   return (
     <tr className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isPaid ? 'opacity-60' : ''} ${selected ? 'bg-indigo-50 hover:bg-indigo-50' : ''}`}>
@@ -118,36 +151,39 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
             </p>
 
             {/* Categoría inline */}
-            <div className="relative inline-block" ref={categoryRef}>
+            <div className="inline-block">
               <button
-                onClick={() => toggle('category')}
+                ref={categoryAnchor}
+                onClick={() => setActiveField(prev => prev === 'category' ? null : 'category')}
                 className={`text-xs transition-colors ${expense.category ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-indigo-500'}`}
               >
                 {expense.category || 'Sin categoría'}
               </button>
               {activeField === 'category' && (
-                <div className="absolute left-0 top-5 z-30 bg-white shadow-xl rounded-xl border border-gray-200 py-1.5 w-48 max-h-52 overflow-y-auto">
-                  <button
-                    onClick={() => selectCategory('')}
-                    className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 ${!expense.category ? 'text-indigo-600 font-semibold' : 'text-gray-500'}`}
-                  >
-                    Sin categoría
-                  </button>
-                  {CATEGORIES.map(cat => (
+                <Popup anchorRef={categoryAnchor} onClose={closeAll}>
+                  <div className="py-0.5 max-h-52 overflow-y-auto">
                     <button
-                      key={cat}
-                      onClick={() => selectCategory(cat)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 ${expense.category === cat ? 'text-indigo-600 font-semibold bg-indigo-50' : 'text-gray-700'}`}
+                      onClick={() => selectCategory('')}
+                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 rounded-lg ${!expense.category ? 'text-indigo-600 font-semibold' : 'text-gray-600'}`}
                     >
-                      {cat}
+                      Sin categoría
                     </button>
-                  ))}
-                </div>
+                    {CATEGORIES.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => selectCategory(cat)}
+                        className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 rounded-lg ${expense.category === cat ? 'text-indigo-600 font-semibold bg-indigo-50' : 'text-gray-700'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </Popup>
               )}
             </div>
 
             {expense.split_members && expense.split_members.length > 1 && (
-              <p className="text-xs text-indigo-400 flex items-center gap-0.5 mt-0.5">
+              <p className="text-xs text-indigo-500 flex items-center gap-0.5 mt-0.5">
                 <Users className="w-3 h-3" /> ÷{expense.split_members.length} personas
               </p>
             )}
@@ -162,16 +198,15 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
 
       {/* Corresponde a — editable con chips + split */}
       <td className="py-3 px-4">
-        <div className="relative inline-block" ref={paidByRef}>
-          <button onClick={openPicker} className="text-left">
+        <div className="inline-block">
+          <button ref={paidByAnchor} onClick={openPicker} className="text-left">
             {expense.paid_by
               ? <Badge color="indigo" className="cursor-pointer hover:opacity-80">{expense.paid_by}</Badge>
               : <span className="text-xs text-gray-400 hover:text-gray-600 transition-colors">— asignar</span>}
           </button>
 
           {activeField === 'paid_by' && (
-            <div className="absolute left-0 top-7 z-30 bg-white shadow-xl rounded-xl border border-gray-200 p-3 w-56">
-
+            <Popup anchorRef={paidByAnchor} onClose={closeAll}>
               {/* Toggle modo split */}
               <button
                 onClick={() => {
@@ -181,7 +216,7 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
                   else setSplitSel([])
                 }}
                 className={`flex items-center gap-1.5 w-full text-xs font-medium px-2 py-1.5 rounded-lg mb-2 transition-colors ${
-                  splitMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'
+                  splitMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
@@ -216,7 +251,6 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
                 className="flex gap-1 mb-2"
               >
                 <input
-                  autoFocus={allPersons.length === 0}
                   value={newPerson}
                   onChange={e => setNewPerson(e.target.value)}
                   placeholder="Nuevo nombre..."
@@ -248,13 +282,13 @@ export function ExpenseRow({ expense, onEdit, onDelete, onToggleStatus, onUpdate
                   </button>
                 </>
               )}
-            </div>
+            </Popup>
           )}
         </div>
       </td>
 
       {/* Cuota */}
-      <td className="py-3 px-4 text-sm text-gray-600 text-center">
+      <td className="py-3 px-4 text-sm text-gray-700 text-center">
         {formatInstallment(expense.installment_current, expense.installment_total)}
       </td>
 

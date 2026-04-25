@@ -113,35 +113,35 @@ export function ExpenseForm({
 
         {/* Descripción */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Descripción *</label>
           <input
             required
             value={form.description}
             onChange={set('description')}
             placeholder="ej: Unimarc, Netflix, Copec..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Monto */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Monto (CLP) *</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Monto (CLP) *</label>
           <input
             required type="number" min="0"
             value={form.amount}
             onChange={set('amount')}
             placeholder="0"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Banco */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Banco / Fuente</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Banco / Fuente</label>
           <select
             value={form.bank}
             onChange={set('bank')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {bankOptions.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
           </select>
@@ -149,13 +149,13 @@ export function ExpenseForm({
 
         {/* Corresponde a */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Corresponde a</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Corresponde a</label>
           <input
             list="persons-list"
             value={form.paid_by}
             onChange={set('paid_by')}
             placeholder="ej: César, Nicole, Mamá..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <datalist id="persons-list">
             {knownPersons.map(p => <option key={p} value={p} />)}
@@ -235,31 +235,31 @@ export function ExpenseForm({
 
         {/* Cuotas */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cuota actual</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Cuota actual</label>
           <input
             type="number" min="1"
             value={form.installment_current}
             onChange={set('installment_current')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Total cuotas</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Total cuotas</label>
           <input
             type="number" min="1"
             value={form.installment_total}
             onChange={set('installment_total')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Estado */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Estado</label>
           <select
             value={form.status}
             onChange={set('status')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="pendiente">Pendiente</option>
             <option value="pagado">Pagado</option>
@@ -268,11 +268,11 @@ export function ExpenseForm({
 
         {/* Categoría */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Categoría</label>
           <select
             value={form.category}
             onChange={set('category')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Sin categoría</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -281,13 +281,13 @@ export function ExpenseForm({
 
         {/* Notas */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Notas</label>
           <textarea
             value={form.notes}
             onChange={set('notes')}
             rows={2}
             placeholder="Información adicional..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>

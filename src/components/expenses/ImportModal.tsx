@@ -220,7 +220,7 @@ export function ImportModal({ defaultMonth, defaultYear, onImport, onCancel }: I
       </div>
 
       <div className="flex justify-between items-center pt-2">
-        <button onClick={() => { setRows([]); setStep('upload') }} className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
+        <button onClick={() => { setRows([]); setSelected(new Set()); setStep('upload') }} className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
           <X className="w-4 h-4" /> Cambiar archivo
         </button>
         <Button onClick={handleImport} loading={loading} disabled={selected.size === 0}>

@@ -61,33 +61,28 @@ export async function createExpense(expense: Omit<Expense, 'id' | 'created_at'>)
   return data as Expense
 }
 
-export async function updateExpense(id: string, updates: Partial<Expense>) {
-  const { data, error } = await supabase
-    .from('expenses')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single()
+export async function updateExpense(id: string, updates: Partial<Expense>, userId?: string) {
+  let query = supabase.from('expenses').update(updates).eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+  const { data, error } = await query.select().single()
 
   if (error) throw error
   return data as Expense
 }
 
-export async function deleteExpense(id: string) {
-  const { error } = await supabase
-    .from('expenses')
-    .delete()
-    .eq('id', id)
+export async function deleteExpense(id: string, userId?: string) {
+  let query = supabase.from('expenses').delete().eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+  const { error } = await query
 
   if (error) throw error
 }
 
-export async function deleteExpensesBulk(ids: string[]) {
+export async function deleteExpensesBulk(ids: string[], userId?: string) {
   if (ids.length === 0) return
-  const { error } = await supabase
-    .from('expenses')
-    .delete()
-    .in('id', ids)
+  let query = supabase.from('expenses').delete().in('id', ids)
+  if (userId) query = query.eq('user_id', userId)
+  const { error } = await query
 
   if (error) throw error
 }

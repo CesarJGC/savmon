@@ -85,14 +85,14 @@ export default function DashboardPage() {
 
   async function handleEdit(data: Omit<Expense, 'id' | 'created_at' | 'user_id'>) {
     if (!editingExpense) return
-    await updateExpense(editingExpense.id, data)
+    await updateExpense(editingExpense.id, data, user?.id)
     setEditingExpense(null)
     load()
   }
 
   async function handleDelete(id: string) {
     if (!confirm('¿Eliminar este gasto?')) return
-    await deleteExpense(id)
+    await deleteExpense(id, user?.id)
     load()
   }
 
@@ -102,7 +102,7 @@ export default function DashboardPage() {
   }
 
   async function handleUpdate(id: string, updates: Partial<Pick<Expense, 'paid_by' | 'category' | 'split_members'>>) {
-    await updateExpense(id, updates)
+    await updateExpense(id, updates, user?.id)
     load()
   }
 
@@ -122,7 +122,7 @@ export default function DashboardPage() {
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return
     if (!confirm(`¿Eliminar ${selectedIds.size} gasto${selectedIds.size > 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return
-    await deleteExpensesBulk(Array.from(selectedIds))
+    await deleteExpensesBulk(Array.from(selectedIds), user?.id)
     setSelectedIds(new Set())
     load()
   }

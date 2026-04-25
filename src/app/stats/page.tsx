@@ -42,7 +42,9 @@ export default function StatsPage() {
   const now = new Date()
   const thisMonth = filtered.filter(e => e.year === now.getFullYear() && e.month === now.getMonth() + 1)
   const lastMonth = filtered.filter(e => {
-    const lm = now.getMonth() === 0 ? { y: now.getFullYear() - 1, m: 12 } : { y: now.getFullYear(), m: now.getMonth() }
+    const lm = now.getMonth() === 0
+      ? { y: now.getFullYear() - 1, m: 12 }
+      : { y: now.getFullYear(), m: now.getMonth() }
     return e.year === lm.y && e.month === lm.m
   })
 
